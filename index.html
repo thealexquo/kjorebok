@@ -137,6 +137,13 @@
     <label for="s-purpose" style="margin-top:10px">Standard formål</label>
     <input id="s-purpose" list="dl-purpose">
     <label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-route"> Bruk TomTom-rute-km i stedet for GPS-km etter sporing</label>
+    <h2 style="margin-top:18px">Bompenger</h2>
+    <label for="s-vehicle">Biltype</label>
+    <select id="s-vehicle"><option value="el">Elbil</option><option value="fossil">Bensin / diesel / hybrid</option></select>
+    <label for="s-elpct" style="margin-top:10px">Elbil betaler (% av ordinær takst)</label>
+    <input id="s-elpct" inputmode="decimal">
+    <label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-autopass"> AutoPASS-avtale (20 % rabatt)</label>
+    <p class="hint">Takster, kjøreretning og timesregel hentes fra Statens vegvesen. Elbilandelen varierer mellom bompengeselskap (Fjellinjen i Oslo: 50 %).</p>
     <div class="actions" style="margin-top:14px"><button class="btn" type="submit">Lagre innstillinger</button></div>
   </form>
   <div class="card">

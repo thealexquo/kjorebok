@@ -4,7 +4,7 @@
 "use strict";
 
 const PURPOSES = ["Vernerunde", "Samordningsmøte", "Granskning", "Befaring", "Møte", "Kurs/opplæring"];
-const K = { trips: "kb_trips", settings: "kb_settings", active: "kb_active", tolls: "kb_tolls" };
+const K = { trips: "kb_trips", settings: "kb_settings", active: "kb_active", tolls: "kb_tolls2", brg: "kb_brg" };
 const NVDB_URL = "https://nvdbapiles.atlas.vegvesen.no/vegobjekter/api/v4/vegobjekter/45?inkluder=egenskaper,lokasjon&srid=4326&antall=1000";
 const $ = s => document.querySelector(s);
 
@@ -15,7 +15,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const num = v => { if (v === "" || v == null) return null; const n = parseFloat(String(v).replace(",", ".").replace(/\s/g, "")); return isFinite(n) ? n : null; };
 const r1 = n => Math.round(n * 10) / 10;
 const fmt = (n, d = 1) => (n == null ? "" : Number(n).toLocaleString("nb-NO", { minimumFractionDigits: d, maximumFractionDigits: d }));
-const fmtKr = n => (n ? Math.round(n).toLocaleString("nb-NO") + " kr" : "");
+const fmtKr = n => (n ? (Math.round(n * 100) / 100).toLocaleString("nb-NO", { maximumFractionDigits: 2 }) + " kr" : "");
 const pad = n => String(n).padStart(2, "0");
 const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -43,7 +43,7 @@ function distToSeg(p, a, b) {
 
 // ---------- tilstand ----------
 let trips = load(K.trips, []);
-let settings = Object.assign({ key: "", home: null, purpose: "", useRouteKm: true }, load(K.settings, {}));
+let settings = Object.assign({ key: "", home: null, purpose: "", useRouteKm: true, vehicle: "el", elPct: 50, autopass: true }, load(K.settings, {}));
 const saveTrips = () => save(K.trips, trips);
 const saveSettings = () => save(K.settings, settings);
 function upsertTrip(t) { const i = trips.findIndex(x => x.id === t.id); if (i >= 0) trips[i] = t; else trips.push(t); saveTrips(); }
@@ -105,7 +105,7 @@ async function routeKm(coords) {
     const j = await getJSON(`https://api.tomtom.com/routing/1/calculateRoute/${locs}/json?key=${encodeURIComponent(settings.key)}&travelMode=car&routeType=fastest&traffic=false`);
     const r = (j.routes || [])[0]; if (!r) return null;
     const pts = r.legs.flatMap(l => l.points.map(p => [p.latitude, p.longitude]));
-    return { km: r1(r.summary.lengthInMeters / 1000), points: pts };
+    return { km: r1(r.summary.lengthInMeters / 1000), points: pts, secs: r.summary.travelTimeInSeconds || 0 };
   } catch { return null; }
 }
 
@@ -120,7 +120,9 @@ function parseStations(objs) {
       name: e["Navn bomstasjon"] || "Bomstasjon", anlegg: e["Navn bompengeanlegg"] || "",
       lat: +m[1], lon: +m[2], price: num(e["Takst liten bil"]), rush: num(e["Rushtidstakst liten bil"]),
       rm: [e["Rushtid morgen, fra"], e["Rushtid morgen, til"]], ra: [e["Rushtid ettermiddag, fra"], e["Rushtid ettermiddag, til"]],
-      dir: e["Innkrevningsretning"] || ""
+      dir: e["Innkrevningsretning"] || "",
+      id: o.id, vls: o.lokasjon?.stedfestinger?.[0]?.veglenkesekvensid || null, rel: o.lokasjon?.stedfestinger?.[0]?.relativPosisjon ?? null,
+      grp: e["Timesregel, passeringsgruppe"] || null, hourMin: num(e["Timesregel, varighet"]) || 60, hourRule: e["Timesregel"] || ""
     });
   }
   return out;
@@ -150,11 +152,37 @@ async function ensureStations() {
 function inWindow(time, w) { return w[0] && w[1] && time >= w[0] && time <= w[1]; }
 function priceAt(st, when) {
   const wd = when.getDay(), t = hhmm(when);
-  const rush = wd >= 1 && wd <= 5 && st.rush && (inWindow(t, st.rm) || inWindow(t, st.ra));
-  return rush ? st.rush : (st.price || 0);
+  const julyFree = when.getMonth() === 6 && /fjellinjen/i.test(st.anlegg || "");
+  const rush = wd >= 1 && wd <= 5 && !julyFree && st.rush && (inWindow(t, st.rm) || inWindow(t, st.ra));
+  let p = rush ? st.rush : (st.price || 0);
+  if (settings.vehicle !== "fossil") p *= (num(settings.elPct) ?? 50) / 100;   // elbil: andel av ordinær takst
+  if (settings.autopass !== false) p *= 0.8;                                    // AutoPASS-avtale: 20 % rabatt
+  return Math.round(p * 100) / 100;
 }
-// pts: [[lat,lon,timeMs?]]; finner stasjoner som ligger innenfor terskel fra sporet
-function detectTolls(pts, startMs, threshold) {
+// retning (grader) fra a til b
+const bearing = (a, b) => { const toR = x => x * Math.PI / 180, dl = toR(b[1] - a[1]); const y = Math.sin(dl) * Math.cos(toR(b[0])), x = Math.cos(toR(a[0])) * Math.sin(toR(b[0])) - Math.sin(toR(a[0])) * Math.cos(toR(b[0])) * Math.cos(dl); return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; };
+const angDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+const parseLine = wkt => wkt.replace(/^[^(]*\(/, "").replace(/\).*$/, "").split(",").map(s => s.trim().split(/\s+/).map(Number)).map(c => [c[0], c[1]]);
+let brgCache = load(K.brg, {});
+// veiens metreringsretning ved bomstasjonen (fra NVDB vegnett), mellomlagret
+async function stationBearing(s) {
+  if (s.id != null && s.id in brgCache) return brgCache[s.id];
+  if (!s.vls || s.rel == null) return null;
+  try {
+    const j = await getJSON(`https://nvdbapiles.atlas.vegvesen.no/vegnett/api/v4/veglenkesekvenser/${s.vls}?srid=4326`);
+    const links = (j.veglenker || []).filter(v => !v.sluttdato && v.startposisjon <= s.rel && v.sluttposisjon >= s.rel && v.geometri?.wkt);
+    let best = null;
+    for (const v of links) {
+      const pts = parseLine(v.geometri.wkt);
+      for (let i = 1; i < pts.length; i++) { const r = distToSeg([s.lat, s.lon], pts[i - 1], pts[i]); if (!best || r.d < best.d) best = { d: r.d, b: bearing(pts[i - 1], pts[i]) }; }
+    }
+    const b = best && best.d < 60 ? best.b : null;
+    brgCache[s.id] = b; save(K.brg, brgCache);
+    return b;
+  } catch { return null; }
+}
+// pts: [[lat,lon,timeMs?]]; finner bomstasjoner du faktisk passerer i betalingsretningen
+async function detectTolls(pts, startMs, threshold) {
   const st = stations(); if (!st.length || pts.length < 2) return [];
   let minLa = 90, maxLa = -90, minLo = 180, maxLo = -180;
   pts.forEach(p => { minLa = Math.min(minLa, p[0]); maxLa = Math.max(maxLa, p[0]); minLo = Math.min(minLo, p[1]); maxLo = Math.max(maxLo, p[1]); });
@@ -163,16 +191,35 @@ function detectTolls(pts, startMs, threshold) {
   for (const s of cand) {
     let best = null;
     for (let i = 1; i < pts.length; i++) {
+      if (dist(pts[i - 1], pts[i]) < 1) continue;
       const r = distToSeg([s.lat, s.lon], pts[i - 1], pts[i]);
       if (r.d < threshold && (!best || r.d < best.d)) best = { d: r.d, i, t: r.t };
     }
-    if (best) {
-      const a = pts[best.i - 1], b = pts[best.i];
-      const ms = a[2] && b[2] ? a[2] + (b[2] - a[2]) * best.t : startMs;
-      hits.push({ name: s.name, anlegg: s.anlegg, price: priceAt(s, new Date(ms)), time: hhmm(new Date(ms)), order: best.i + best.t, dir: s.dir, on: true });
+    if (!best) continue;
+    const a = pts[best.i - 1], b = pts[best.i];
+    const sb = await stationBearing(s);
+    let note = "";
+    if (sb == null) note = "retning ukjent";
+    else {
+      const d = angDiff(bearing(a, b), sb);
+      if (d > 45 && d < 135) continue;                    // kryssende vei (bro/kulvert) – ingen passering
+      const along = d <= 45, ir = (s.dir || "").toLowerCase();
+      const charged = !ir || ir.includes("begge") || (ir.includes("med") && along) || (ir.includes("mot") && !along);
+      if (!charged) continue;                              // kjører i retningen uten innkreving
     }
+    const ms = a[2] && b[2] ? a[2] + (b[2] - a[2]) * best.t : startMs;
+    hits.push({ s, ms, note, order: best.i + best.t });
   }
-  return hits.sort((a, b) => a.order - b.order).map(({ order, ...h }) => h);
+  hits.sort((x, y) => x.order - y.order);
+  const uniq = hits.filter((h, i) => !hits.slice(0, i).some(o => o.s.name === h.s.name && o.s.anlegg === h.s.anlegg && Math.abs(o.order - h.order) < 5));
+  // timesregel: i samme passeringsgruppe betales bare første passering innenfor perioden
+  const lastPaid = {};
+  return uniq.map(({ s, ms, note }) => {
+    let price = priceAt(s, new Date(ms));
+    if (s.grp && /første/i.test(s.hourRule) && lastPaid[s.grp] != null && ms - lastPaid[s.grp] < s.hourMin * 60000) { price = 0; note = "timesregel"; }
+    else if (s.grp) lastPaid[s.grp] = ms;
+    return { name: s.name, anlegg: s.anlegg, price, time: hhmm(new Date(ms)), note, on: true };
+  });
 }
 
 // ---------- kjent sted-historikk ----------
@@ -314,7 +361,7 @@ async function finalize(a) {
     const r = await routeKm(sample);
     kmRoute = r ? r.km : null;
   }
-  const tolls = detectTolls(pts, a.startedAt, 80);
+  const tolls = await detectTolls(pts, a.startedAt, 60);
   const km = settings.useRouteKm && kmRoute ? kmRoute : kmGps;
   return {
     id: a.id, status: "draft", source: "gps",
@@ -419,15 +466,19 @@ async function recalcRoute() {
   $("#routeInfo").textContent = `Rute: ${fmt(r.km)} km`;
   const [h, m] = (F("time").value || "08:00").split(":");
   const d = new Date(F("date").value + "T00:00"); d.setHours(+h, +m);
-  editing.tolls = detectTolls(r.points.map(p => [p[0], p[1], 0]), d.getTime(), 40);
+  let acc = 0; const cum = r.points.map((p, i) => (acc += i ? dist(r.points[i - 1], p) : 0));
+  const t0 = d.getTime(), tot = acc || 1;
+  const tolls = await detectTolls(r.points.map((p, i) => [p[0], p[1], t0 + Math.round((cum[i] / tot) * (r.secs || 0) * 1000)]), t0, 30);
+  if (my !== routeSeq) return;
+  editing.tolls = tolls;
   renderTolls(); renderKmChoice();
 }
 function renderTolls() {
   const box = $("#tollList");
   if (!editing.tolls.length) { box.innerHTML = ""; return; }
-  box.innerHTML = `<p class="hint" style="margin:0 0 4px">Mulige bompasseringer (estimat – sjekk retning og timesregel):</p>` + editing.tolls.map((t, i) => `
-    <div class="toll"><label><input type="checkbox" data-i="${i}" ${t.on ? "checked" : ""}> ${esc(t.name)}${t.time && editing.source === "gps" ? ` <span class="hint">kl. ${t.time}</span>` : ""}</label><span>${fmtKr(t.price) || "?"}</span></div>`).join("");
-  F("toll").value = String(editing.tolls.filter(t => t.on).reduce((s, t) => s + (t.price || 0), 0) || "");
+  box.innerHTML = `<p class="hint" style="margin:0 0 4px">Bompasseringer – estimat for ${settings.vehicle === "fossil" ? "bensin/diesel" : "elbil"}${settings.autopass !== false ? " med AutoPASS" : ""}:</p>` + editing.tolls.map((t, i) => `
+    <div class="toll"><label><input type="checkbox" data-i="${i}" ${t.on ? "checked" : ""}> ${esc(t.name)}${t.time && editing.source === "gps" ? ` <span class="hint">kl. ${t.time}</span>` : ""}${t.note ? ` <span class="hint">(${esc(t.note)})</span>` : ""}</label><span>${t.note === "timesregel" ? "0 kr" : fmtKr(t.price) || "?"}</span></div>`).join("");
+  F("toll").value = String(Math.round(editing.tolls.filter(t => t.on).reduce((s, t) => s + (t.price || 0), 0) * 100) / 100 || "");
 }
 $("#tollList").addEventListener("change", e => { const i = e.target.dataset.i; if (i == null) return; editing.tolls[i].on = e.target.checked; renderTolls(); });
 function renderKmChoice() {
@@ -540,7 +591,7 @@ function renderList() {
 
 // ---------- eksport ----------
 const COLS = ["Dato", "Start", "Fra", "Via", "Til", "Formål", "Prosjekt", "Km", "Bompenger", "Parkering/utlegg", "Kommentar"];
-const rowOf = t => [fmtDate(t.date), t.time || "", tripFrom(t), tripVia(t), tripTo(t), t.purpose, t.project, fmt(tripKm(t)), t.toll ? String(Math.round(t.toll)) : "", t.park ? (t.parkAmt ? Math.round(t.parkAmt) + " kr" : "Ja") + (t.expDone ? " (levert)" : "") : "", t.note].map(v => String(v ?? ""));
+const rowOf = t => [fmtDate(t.date), t.time || "", tripFrom(t), tripVia(t), tripTo(t), t.purpose, t.project, fmt(tripKm(t)), t.toll ? fmt(t.toll, 2) : "", t.park ? (t.parkAmt ? Math.round(t.parkAmt) + " kr" : "Ja") + (t.expDone ? " (levert)" : "") : "", t.note].map(v => String(v ?? ""));
 const okPeriod = () => periodTrips().filter(t => t.status !== "draft");
 function download(name, text, type) {
   const a = document.createElement("a");
@@ -572,6 +623,7 @@ let homePick = null;
 function renderSettings() {
   $("#s-key").value = settings.key || ""; $("#s-home").value = settings.home?.label || "";
   $("#s-purpose").value = settings.purpose || ""; $("#s-route").checked = !!settings.useRouteKm;
+  $("#s-vehicle").value = settings.vehicle || "el"; $("#s-elpct").value = settings.elPct ?? 50; $("#s-autopass").checked = settings.autopass !== false;
   const base = location.origin + location.pathname;
   $("#autoStart").textContent = base + "?auto=start"; $("#autoStop").textContent = base + "?auto=stop";
   renderTollStatus();
@@ -583,6 +635,7 @@ $("#settingsform").addEventListener("submit", e => {
   const hl = $("#s-home").value.trim();
   settings.home = hl ? (homePick && homePick.label === hl ? homePick : (settings.home && settings.home.label === hl ? settings.home : { label: hl, lat: null, lon: null })) : null;
   settings.purpose = $("#s-purpose").value.trim(); settings.useRouteKm = $("#s-route").checked;
+  settings.vehicle = $("#s-vehicle").value; settings.elPct = num($("#s-elpct").value) ?? 50; settings.autopass = $("#s-autopass").checked;
   saveSettings(); toast("Innstillinger lagret"); renderAll();
 });
 function renderTollStatus() {
@@ -634,5 +687,5 @@ ensureStations();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
 // til testing
-window.__kb = { finalize, detectTolls, parseStations, dist };
+window.__kb = { finalize, detectTolls, parseStations, dist, stationBearing, priceAt };
 })();
