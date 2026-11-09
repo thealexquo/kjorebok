@@ -208,10 +208,15 @@ async function detectTolls(pts, startMs, threshold) {
       if (!charged) continue;                              // kjører i retningen uten innkreving
     }
     const ms = a[2] && b[2] ? a[2] + (b[2] - a[2]) * best.t : startMs;
-    hits.push({ s, ms, note, order: best.i + best.t });
+    hits.push({ s, ms, note, d: best.d, order: best.i + best.t });
   }
   hits.sort((x, y) => x.order - y.order);
-  const uniq = hits.filter((h, i) => !hits.slice(0, i).some(o => o.s.name === h.s.name && o.s.anlegg === h.s.anlegg && Math.abs(o.order - h.order) < 5));
+  // samme stasjon flere ganger, eller hovedvei + rampe i samme kryss: behold den som ligger nærmest ruten
+  const uniq = [];
+  for (const h of hits) {
+    const k = uniq.findIndex(o => (o.s.name === h.s.name && o.s.anlegg === h.s.anlegg && Math.abs(o.order - h.order) < 5) || (dist([o.s.lat, o.s.lon], [h.s.lat, h.s.lon]) < 200 && Math.abs(o.ms - h.ms) < 90000));
+    if (k < 0) uniq.push(h); else if (h.d < uniq[k].d) uniq[k] = h;
+  }
   // timesregel: i samme passeringsgruppe betales bare første passering innenfor perioden
   const lastPaid = {};
   return uniq.map(({ s, ms, note }) => {
@@ -476,8 +481,9 @@ async function recalcRoute() {
 function renderTolls() {
   const box = $("#tollList");
   if (!editing.tolls.length) { box.innerHTML = ""; return; }
-  box.innerHTML = `<p class="hint" style="margin:0 0 4px">Bompasseringer – estimat for ${settings.vehicle === "fossil" ? "bensin/diesel" : "elbil"}${settings.autopass !== false ? " med AutoPASS" : ""}:</p>` + editing.tolls.map((t, i) => `
-    <div class="toll"><label><input type="checkbox" data-i="${i}" ${t.on ? "checked" : ""}> ${esc(t.name)}${t.time && editing.source === "gps" ? ` <span class="hint">kl. ${t.time}</span>` : ""}${t.note ? ` <span class="hint">(${esc(t.note)})</span>` : ""}</label><span>${t.note === "timesregel" ? "0 kr" : fmtKr(t.price) || "?"}</span></div>`).join("");
+  const free = editing.tolls.filter(t => t.note === "timesregel").length;
+  box.innerHTML = `<p class="hint" style="margin:0 0 4px">Bompasseringer – estimat for ${settings.vehicle === "fossil" ? "bensin/diesel" : "elbil"}${settings.autopass !== false ? " med AutoPASS" : ""}:</p>` + editing.tolls.map((t, i) => t.note === "timesregel" ? "" : `
+    <div class="toll"><label><input type="checkbox" data-i="${i}" ${t.on ? "checked" : ""}> ${esc(t.name)}${t.time && editing.source === "gps" ? ` <span class="hint">kl. ${t.time}</span>` : ""}${t.note ? ` <span class="hint">(${esc(t.note)})</span>` : ""}</label><span>${t.note === "timesregel" ? "0 kr" : fmtKr(t.price) || "?"}</span></div>`).join("") + (free ? `<p class="hint" style="margin:4px 0 0">+ ${free} passering${free > 1 ? "er" : ""} uten kostnad (timesregel)</p>` : "");
   F("toll").value = String(Math.round(editing.tolls.filter(t => t.on).reduce((s, t) => s + (t.price || 0), 0) * 100) / 100 || "");
 }
 $("#tollList").addEventListener("change", e => { const i = e.target.dataset.i; if (i == null) return; editing.tolls[i].on = e.target.checked; renderTolls(); });
