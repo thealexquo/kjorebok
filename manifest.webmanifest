@@ -1,0 +1,22 @@
+{
+  "name": "Kjørebok",
+  "short_name": "Kjørebok",
+  "description": "Registrer jobbkjøring med GPS eller adresse, og eksporter til kjøredagboken.",
+  "lang": "nb",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f5f2",
+  "theme_color": "#1f5f8b",
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Start kjøring", "url": "./?auto=start", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Stopp kjøring", "url": "./?auto=stop", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

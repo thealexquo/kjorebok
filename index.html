@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5f8b">
+<title>Kjørebok</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="top"><h1>Kjørebok</h1><span id="status"></span></div>
+  <nav>
+    <button data-tab="kjor" class="on">Kjør</button>
+    <button data-tab="ny">Ny tur</button>
+    <button data-tab="oversikt">Oversikt</button>
+    <button data-tab="innst">Innstillinger</button>
+  </nav>
+</header>
+
+<main>
+<!-- KJØR -->
+<section id="kjor" class="on">
+  <div class="card drive">
+    <div class="place dest" id="destWrap">
+      <label for="d-dest" style="text-align:left">Hvor skal du? (valgfritt)</label>
+      <input id="d-dest" placeholder="Skriv adresse – eller la stå tomt og bare kjør">
+    </div>
+    <div class="drive-stats">
+      <div><span>Kilometer</span><b id="d-km">0,0</b></div>
+      <div><span>Tid</span><b id="d-time">00:00</b></div>
+      <div><span>GPS</span><b id="d-gps">–</b></div>
+    </div>
+    <button id="driveBtn" class="drivebtn">Kjør</button>
+    <p class="hint center" id="driveHint">Trykk Kjør når du starter. Hold appen åpen med skjermen på (bilholder) mens du kjører.</p>
+    <div style="text-align:left;margin-top:14px">
+      <label for="d-note">Kommentar</label>
+      <input id="d-note" placeholder="f.eks. betalte parkering 80 kr">
+      <label class="toggle" style="margin-top:8px"><input type="checkbox" id="d-park"> Parkering / utlegg å levere</label>
+    </div>
+  </div>
+
+  <div class="card" id="expenseCard" hidden>
+    <h2>Utlegg å levere</h2>
+    <div id="expenses"></div>
+  </div>
+
+  <div class="card" id="draftsCard" hidden>
+    <h2>Til gjennomgang</h2>
+    <div id="drafts"></div>
+  </div>
+
+  <div class="card" id="recentCard">
+    <h2>Siste turer</h2>
+    <div id="recent"></div>
+  </div>
+</section>
+
+<!-- NY TUR / REDIGER -->
+<section id="ny">
+  <form class="card" id="tripform" autocomplete="off">
+    <h2 id="formtitle">Registrer tur</h2>
+    <div class="row">
+      <div><label for="f-date">Dato</label><input type="date" id="f-date" required></div>
+      <div><label for="f-time">Starttid</label><input type="time" id="f-time"></div>
+    </div>
+    <label>Strekning</label>
+    <div id="places" class="places"></div>
+    <div class="actions" style="margin:6px 0 12px">
+      <button type="button" class="btn small ghost" id="addVia">+ Via</button>
+      <button type="button" class="btn small ghost" id="homeBtn" title="Sett siste stopp lik start">↺ Tilbake til start</button>
+      <span class="hint" id="routeInfo"></span>
+    </div>
+    <div class="full">
+      <label>Formål</label>
+      <div class="chips" id="purposechips"></div>
+      <input id="f-purpose" style="margin-top:8px" placeholder="Eller skriv eget formål" list="dl-purpose">
+    </div>
+    <div class="full"><label for="f-project">Prosjekt / byggeplass</label><input id="f-project" list="dl-project"></div>
+    <div class="row">
+      <div><label for="f-km">Kilometer (totalt)</label><input id="f-km" inputmode="decimal" required></div>
+      <div><label for="f-toll">Bompenger (kr, estimat)</label><input id="f-toll" inputmode="decimal"></div>
+    </div>
+    <div id="kmChoice" class="hint" hidden></div>
+    <div id="tollList" class="tolls"></div>
+    <div class="full"><label for="f-note">Kommentar</label><input id="f-note" placeholder="Passasjerer, parkering …"></div>
+    <div class="row">
+      <div style="display:flex;align-items:center"><label class="toggle" style="margin:0"><input type="checkbox" id="f-park"> Parkering / utlegg</label></div>
+      <div><label for="f-parkAmt">Beløp (kr)</label><input id="f-parkAmt" inputmode="decimal"></div>
+    </div>
+    <label class="toggle full"><input type="checkbox" id="f-expDone"> Utlegg er levert</label>
+    <div class="actions">
+      <button class="btn" type="submit" id="savebtn">Lagre tur</button>
+      <button class="btn ghost" type="button" id="cancelEdit" hidden>Avbryt</button>
+      <button class="btn danger" type="button" id="deleteTrip" hidden>Slett</button>
+    </div>
+  </form>
+</section>
+
+<!-- OVERSIKT -->
+<section id="oversikt">
+  <div class="monthbar"><select id="month"></select></div>
+  <div class="stats">
+    <div class="stat"><span>Turer</span><b id="s-count">0</b></div>
+    <div class="stat"><span>Kilometer</span><b id="s-km">0</b></div>
+    <div class="stat"><span>Bompenger</span><b id="s-toll">0</b></div>
+  </div>
+  <div class="card">
+    <h2>Til kjøredagboken</h2>
+    <div class="actions">
+      <button class="btn" id="copyTsv">Kopier som tabell</button>
+      <button class="btn ghost" id="dlCsv">Last ned CSV</button>
+      <button class="btn ghost" id="shareText">Del</button>
+    </div>
+    <p class="hint">Tabellen limes rett inn i Excel. Kolonner: Dato, Start, Fra, Via, Til, Formål, Prosjekt, Km, Bompenger, Notat.</p>
+  </div>
+  <div class="card list" id="list"></div>
+  <div class="card">
+    <h2>Steder i perioden</h2>
+    <div id="placesSummary"></div>
+  </div>
+</section>
+
+<!-- INNSTILLINGER -->
+<section id="innst">
+  <form class="card" id="settingsform" autocomplete="off">
+    <h2>TomTom</h2>
+    <label for="s-key">API-nøkkel</label>
+    <input id="s-key" placeholder="Lim inn nøkkel fra developer.tomtom.com">
+    <p class="hint">Gir adresseforslag, kjøreavstand og stedsnavn. Uten nøkkel må du skrive km selv.</p>
+    <h2 style="margin-top:18px">Standarder</h2>
+    <label for="s-home">Standard startsted (kontor)</label>
+    <input id="s-home" placeholder="f.eks. Sundtkvartalet, Oslo">
+    <label for="s-purpose" style="margin-top:10px">Standard formål</label>
+    <input id="s-purpose" list="dl-purpose">
+    <label class="toggle" style="margin-top:12px"><input type="checkbox" id="s-route"> Bruk TomTom-rute-km i stedet for GPS-km etter sporing</label>
+    <div class="actions" style="margin-top:14px"><button class="btn" type="submit">Lagre innstillinger</button></div>
+  </form>
+  <div class="card">
+    <h2>Bomstasjoner</h2>
+    <p class="hint" id="tollStatus">Ikke lastet.</p>
+    <div class="actions"><button class="btn ghost" id="loadTolls">Oppdater fra Statens vegvesen</button></div>
+  </div>
+  <div class="card">
+    <h2>Sikkerhetskopi</h2>
+    <p class="hint">Turene lagres bare på denne telefonen. Ta sikkerhetskopi av og til.</p>
+    <div class="actions">
+      <button class="btn ghost" id="backup">Last ned sikkerhetskopi</button>
+      <label class="btn ghost" for="restore" style="margin:0">Gjenopprett …</label>
+      <input type="file" id="restore" accept="application/json" hidden>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Automatisk start/stopp</h2>
+    <p class="hint">Åpne <code id="autoStart"></code> for å starte og <code id="autoStop"></code> for å stoppe. Bruk disse i MacroDroid når telefonen kobles til/fra bilens Bluetooth (se guiden).</p>
+  </div>
+</section>
+</main>
+
+<datalist id="dl-project"></datalist>
+<datalist id="dl-purpose"></datalist>
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
