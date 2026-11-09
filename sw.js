@@ -1,5 +1,5 @@
 // Enkel offline-cache for appens egne filer. Øk VERSION ved hver oppdatering.
-const VERSION = "kjorebok-v1";
+const VERSION = "kjorebok-v2";
 const FILES = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", e => {

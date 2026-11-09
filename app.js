@@ -372,13 +372,31 @@ function renderPlaces() {
   editing.places.forEach((p, i) => {
     const last = i === editing.places.length - 1;
     const row = document.createElement("div"); row.className = "place";
-    row.innerHTML = `<span class="dot">${i === 0 ? "A" : last ? "B" : "•"}</span><input placeholder="${i === 0 ? "Fra" : last ? "Til" : "Via"}" value="${esc(p.label)}" class="${p.lat != null ? "ok" : ""}">${i > 0 && !last ? `<button type="button" class="rm" aria-label="Fjern">✕</button>` : ""}`;
+    row.innerHTML = `<span class="dot">${i === 0 ? "A" : last ? "B" : "•"}</span><input placeholder="${i === 0 ? "Fra" : last ? "Til" : "Via"}" value="${esc(p.label)}" class="${p.lat != null ? "ok" : ""}"><button type="button" class="gps" title="Bruk min posisjon" aria-label="Bruk min posisjon">📍</button>${i > 0 && !last ? `<button type="button" class="rm" aria-label="Fjern">✕</button>` : ""}`;
     const inp = row.querySelector("input");
+    row.querySelector(".gps").addEventListener("click", e => useMyPosition(i, e.currentTarget));
     inp.addEventListener("input", () => { editing.places[i].label = inp.value; });
     attachAuto(inp, () => { const o = editing.places.find(x => x.lat != null); return o ? [o.lat, o.lon] : null; }, pick => { editing.places[i] = pick; inp.classList.add("ok"); recalcRoute(); });
     row.querySelector(".rm")?.addEventListener("click", () => { editing.places.splice(i, 1); renderPlaces(); recalcRoute(); });
     box.appendChild(row);
   });
+}
+// «Min posisjon»: henter GPS-posisjon og gjør den om til adresse
+async function useMyPosition(i, btn) {
+  if (!("geolocation" in navigator)) { toast("Telefonen gir ikke tilgang til GPS"); return; }
+  btn.disabled = true; btn.textContent = "…";
+  try {
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }));
+    const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+    let label = settings.home?.lat != null && dist([lat, lon], [settings.home.lat, settings.home.lon]) < 400 ? settings.home.label : null;
+    label = label || (await reverseGeocode(lat, lon)) || `Min posisjon (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    editing.places[i] = { label, lat, lon };
+    renderPlaces(); recalcRoute();
+    toast(`Posisjon hentet (±${Math.round(accuracy)} m)`);
+  } catch (e) {
+    toast(e && e.code === 1 ? "Gi appen tilgang til posisjon" : "Fant ikke posisjonen din – prøv igjen");
+    btn.disabled = false; btn.textContent = "📍";
+  }
 }
 $("#addVia").addEventListener("click", () => { editing.places.splice(editing.places.length - 1, 0, { label: "" }); renderPlaces(); $("#places").querySelectorAll("input")[editing.places.length - 2].focus(); });
 $("#homeBtn").addEventListener("click", () => {
