@@ -1,5 +1,5 @@
 // Enkel offline-cache for appens egne filer. Øk VERSION ved hver oppdatering.
-const VERSION = "kjorebok-v5";
+const VERSION = "kjorebok-v6";
 const FONTS = "kjorebok-fonts";
 const FILES = ["./", "index.html", "style.css", "app.js", "swipe.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 
@@ -20,7 +20,7 @@ self.addEventListener("fetch", e => {
   if (url.origin !== location.origin) return; // API-kall går rett til nett
   // nett først (får alltid nyeste versjon), cache som reserve når du er uten dekning
   e.respondWith(
-    fetch(e.request).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); return r; })
+    fetch(e.request, { cache: "no-cache" }).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("index.html")))
   );
 });
