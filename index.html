@@ -3,16 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f5f8b">
+<meta name="theme-color" content="#061533">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("kb_theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
 <title>Kjørebok</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800;900&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-  <div class="top"><h1>Kjørebok</h1><span id="status"></span></div>
+  <div class="top"><h1>Kjørebok</h1><span id="status"></span><button type="button" class="themebtn" id="themeBtn">Lys</button></div>
   <nav>
     <button data-tab="kjor" class="on">Kjør</button>
     <button data-tab="ny">Ny tur</button>
@@ -26,8 +30,8 @@
 <section id="kjor" class="on">
   <div class="card drive">
     <div class="place dest" id="destWrap">
-      <label for="d-dest" style="text-align:left">Hvor skal du? (valgfritt)</label>
-      <input id="d-dest" placeholder="Skriv adresse – eller la stå tomt og bare kjør">
+      <label for="d-dest">Mål (valgfritt) – gir turen riktig navn</label>
+      <input id="d-dest" placeholder="F.eks. Gjerdrum skole – eller la stå tomt">
     </div>
     <div class="drive-stats">
       <div><span>Kilometer</span><b id="d-km">0,0</b></div>
@@ -82,7 +86,7 @@
     <div class="full"><label for="f-project">Prosjekt / byggeplass</label><input id="f-project" list="dl-project"></div>
     <div class="row">
       <div><label for="f-km">Kilometer (totalt)</label><input id="f-km" inputmode="decimal" required></div>
-      <div><label for="f-toll">Bompenger (kr, estimat)</label><input id="f-toll" inputmode="decimal"></div>
+      <div><label for="f-toll">Bompenger (kr)</label><input id="f-toll" inputmode="decimal"></div>
     </div>
     <div id="kmChoice" class="hint" hidden></div>
     <div id="tollList" class="tolls"></div>
@@ -171,5 +175,6 @@
 <datalist id="dl-purpose"></datalist>
 <div id="toast"></div>
 <script src="app.js"></script>
+<script src="swipe.js"></script>
 </body>
 </html>
