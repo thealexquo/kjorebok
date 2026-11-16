@@ -1,0 +1,247 @@
+/* Kjørebok – «Veiskilt»-tema.
+   Skiltblått bærer appen; grønt = kjør, rødt åttekant = stopp, refleksgult = noe du må gjøre. */
+:root {
+  --night: #061533;          /* bakgrunn, mørk modus */
+  --panel: #0c2552;          /* vanlige kort */
+  --sign: #0d3f8f;           /* skiltblå – Kjør-skiltet */
+  --white: #f6f8fb;          /* skilthvit */
+  --ink: #f6f8fb;
+  --muted: #9fb2d1;
+  --line: rgba(246, 248, 251, .14);
+  --field: #081d44;
+  --go: #00915a;             /* grønn skive */
+  --stop: #d3232c;           /* stopp-rød */
+  --warn: #ffc61a;           /* refleksgul */
+  --warn-ink: #1b1500;
+  --primary-bg: var(--white);
+  --primary-ink: #0a2a63;
+  --focus: #ffc61a;
+  --radius: 12px;
+  --font: "Overpass", "Trebuchet MS", sans-serif;
+  --circle: polygon(96.19% 69.13%, 89.67% 80.44%, 80.44% 89.67%, 69.13% 96.19%, 56.53% 99.57%, 43.47% 99.57%, 30.87% 96.19%, 19.56% 89.67%, 10.33% 80.44%, 3.81% 69.13%, 0.43% 56.53%, 0.43% 43.47%, 3.81% 30.87%, 10.33% 19.56%, 19.56% 10.33%, 30.87% 3.81%, 43.47% 0.43%, 56.53% 0.43%, 69.13% 3.81%, 80.44% 10.33%, 89.67% 19.56%, 96.19% 30.87%, 99.57% 43.47%, 99.57% 56.53%);
+  --octagon: polygon(100% 70.71%, 90.24% 80.47%, 80.47% 90.24%, 70.71% 100%, 56.9% 100%, 43.1% 100%, 29.29% 100%, 19.53% 90.24%, 9.76% 80.47%, 0% 70.71%, 0% 56.9%, 0% 43.1%, 0% 29.29%, 9.76% 19.53%, 19.53% 9.76%, 29.29% 0%, 43.1% 0%, 56.9% 0%, 70.71% 0%, 80.47% 9.76%, 90.24% 19.53%, 100% 29.29%, 100% 43.1%, 100% 56.9%);
+  color-scheme: dark;
+}
+html[data-theme="light"] {
+  --night: #e8ecf1;          /* betonglys */
+  --panel: #ffffff;
+  --ink: #0b2350;
+  --muted: #5a6c88;
+  --line: rgba(11, 35, 80, .13);
+  --field: #f3f5f8;
+  --primary-bg: var(--sign);
+  --primary-ink: #ffffff;
+  --focus: #0d3f8f;
+  --warn: #ffc61a;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body {
+  font: 400 16px/1.45 var(--font);
+  color: var(--ink);
+  background-color: var(--night);
+  /* gatelys ovenfra + svakt asfaltkorn */
+  background-image:
+    radial-gradient(120% 60% at 50% -10%, rgba(90, 140, 230, .28), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  min-height: 100vh;
+  font-feature-settings: "tnum" 1;
+  overflow-x: hidden;
+}
+html[data-theme="light"] body {
+  background-image:
+    radial-gradient(120% 60% at 50% -10%, rgba(13, 63, 143, .10), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- topp og faner ---------- */
+header {
+  position: sticky; top: 0; z-index: 5;
+  padding-top: env(safe-area-inset-top);
+  background: color-mix(in srgb, var(--night) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.top { max-width: 640px; margin: 0 auto; padding: 14px 16px 2px; display: flex; align-items: center; gap: 10px; }
+h1 { font-size: 24px; font-weight: 900; letter-spacing: -.01em; margin: 0; line-height: 1; }
+#status { font-size: 13px; color: var(--muted); margin-left: auto; }
+.badge { font-size: 12px; font-weight: 700; background: var(--warn); color: var(--warn-ink); border-radius: 4px; padding: 3px 7px 2px; }
+.themebtn {
+  font: 700 13px/1 var(--font); color: var(--ink); background: transparent;
+  border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 11px 6px; cursor: pointer;
+}
+nav { position: relative; max-width: 640px; margin: 0 auto; display: flex; padding: 0 8px; }
+nav button {
+  flex: 1; border: 0; background: none; cursor: pointer;
+  font: 600 15px/1 var(--font); color: var(--muted);
+  padding: 14px 4px 15px; transition: color .2s;
+}
+nav button.on { color: var(--ink); font-weight: 800; }
+.nav-ind { position: absolute; left: 0; bottom: -1px; height: 3px; width: 60px; border-radius: 3px 3px 0 0; background: var(--warn); }
+.nav-ind.anim { transition: transform .32s cubic-bezier(.3, .8, .3, 1), width .32s cubic-bezier(.3, .8, .3, 1); }
+html[data-theme="light"] .nav-ind { background: var(--sign); }
+
+main { max-width: 640px; margin: 0 auto; padding: 18px 14px calc(90px + env(safe-area-inset-bottom)); }
+section { display: none; }
+section.on { display: block; will-change: transform; transition: transform .25s cubic-bezier(.3, .8, .3, 1), opacity .25s; }
+main[data-dir="next"] section.on { animation: fromRight .32s cubic-bezier(.3, .8, .3, 1); }
+main[data-dir="prev"] section.on { animation: fromLeft .32s cubic-bezier(.3, .8, .3, 1); }
+@keyframes fromRight { from { transform: translateX(42px); opacity: .2; } }
+@keyframes fromLeft { from { transform: translateX(-42px); opacity: .2; } }
+
+/* ---------- kort ---------- */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+.card h2 { font-size: 18px; font-weight: 800; margin: 0 0 12px; letter-spacing: -.005em; }
+html[data-theme="light"] .card:not(.drive) { box-shadow: 0 1px 0 rgba(11, 35, 80, .05); }
+
+/* Kjør-skiltet: blå flate, hvit kantlinje innenfor kanten */
+.card.drive {
+  background: var(--sign); color: var(--white);
+  border: 3px solid var(--white); border-radius: 14px;
+  box-shadow: 0 0 0 5px var(--sign), 0 18px 40px -18px rgba(0, 10, 40, .7);
+  margin: 6px 5px 24px; padding: 20px 18px 18px; text-align: center;
+}
+.drive label, .drive .hint { color: rgba(246, 248, 251, .78); }
+.drive .dest { position: relative; text-align: left; margin-bottom: 18px; }
+.drive .dest .sugg { left: 0; }
+.drive input { background: var(--white); color: #0a2a63; border-color: transparent; }
+.drive input::placeholder { color: #6a7fa3; }
+.drive .toggle { color: var(--white); }
+.drive-stats { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; margin-bottom: 20px; align-items: start; }
+.drive-stats div { text-align: center; }
+.drive-stats span { display: block; font-size: 13px; font-weight: 600; color: rgba(246, 248, 251, .72); }
+.drive-stats b { display: flex; align-items: flex-end; justify-content: center; height: 50px; font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+.drive-stats div:first-child b { font-size: 46px; }
+
+/* Kjør = grønn skive, Stopp = rødt åttekantskilt */
+.drivebtn {
+  --fill: var(--go);
+  position: relative; isolation: isolate;
+  width: 178px; height: 178px; border: 0; padding: 0; cursor: pointer;
+  background: var(--white); color: var(--white);
+  clip-path: var(--circle);
+  font: 900 40px/1 var(--font); letter-spacing: .02em; text-transform: uppercase;
+  transition: clip-path .45s cubic-bezier(.5, 0, .2, 1), transform .15s;
+}
+.drivebtn::before {
+  content: ""; position: absolute; inset: 7px; z-index: -1;
+  background: var(--fill); clip-path: var(--circle);
+  transition: clip-path .45s cubic-bezier(.5, 0, .2, 1), background .3s;
+}
+.drivebtn:active { transform: scale(.97); }
+.drivebtn.on { --fill: var(--stop); clip-path: var(--octagon); font-size: 36px; }
+.drivebtn.on::before { clip-path: var(--octagon); }
+.drivebtn.on { animation: breathe 2.6s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.035); } }
+.drivebtn:focus-visible { outline: none; filter: drop-shadow(0 0 0 var(--focus)) drop-shadow(0 0 6px var(--focus)); }
+
+/* ---------- skjema ---------- */
+label { display: block; font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 5px; }
+input, select {
+  width: 100%; font: 400 16px/1.3 var(--font); color: var(--ink);
+  background: var(--field); border: 1.5px solid var(--line); border-radius: 9px; padding: 12px 12px 10px;
+}
+input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+input::placeholder { color: var(--muted); opacity: .8; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.full { margin-bottom: 14px; }
+.hint { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+.center { text-align: center; }
+.toggle { display: flex; gap: 9px; align-items: center; color: var(--ink); font-size: 15px; font-weight: 400; }
+.toggle input { width: 20px; height: 20px; accent-color: var(--go); }
+code { font-size: 12px; word-break: break-all; }
+
+.btn {
+  display: inline-block; cursor: pointer; text-align: center;
+  font: 800 16px/1 var(--font); border-radius: 9px; padding: 13px 18px 11px;
+  border: 1.5px solid transparent; background: var(--primary-bg); color: var(--primary-ink);
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.small { padding: 8px 12px 7px; font-size: 14px; }
+.btn.danger { background: none; color: var(--stop); border-color: transparent; }
+.btn:disabled { opacity: .5; }
+.btn:focus-visible, .chip:focus-visible, nav button:focus-visible, .themebtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { border: 1.5px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 8px 13px 6px; font: 600 14px/1 var(--font); cursor: pointer; }
+.chip.on { background: var(--primary-bg); color: var(--primary-ink); border-color: transparent; }
+
+.places .place { position: relative; display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.places .place .dot { flex: 0 0 24px; height: 24px; border-radius: 6px; background: var(--sign); color: var(--white); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.places .place input.ok { border-color: color-mix(in srgb, var(--go) 70%, transparent); }
+.places .place .gps { flex: 0 0 auto; border: 1.5px solid var(--line); background: transparent; border-radius: 9px; padding: 10px 10px 9px; font-size: 16px; line-height: 1; cursor: pointer; }
+.places .place .gps:disabled { opacity: .6; }
+.places .place .rm { border: 0; background: none; color: var(--muted); font-size: 18px; padding: 4px 6px; cursor: pointer; }
+.sugg { position: absolute; left: 30px; right: 0; top: 100%; z-index: 10; background: var(--panel); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .45); overflow: hidden; }
+.sugg button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: 600 15px/1.3 var(--font); padding: 11px 12px 9px; cursor: pointer; }
+.sugg button small { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+
+.tolls .toll { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 15px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tolls .toll label { display: flex; gap: 8px; align-items: center; margin: 0; color: var(--ink); font-size: 15px; font-weight: 400; }
+.tolls .toll input { width: 18px; height: 18px; accent-color: var(--go); }
+.tolls .toll span:last-child { font-weight: 800; }
+
+/* ---------- lister ---------- */
+.trip { display: flex; justify-content: space-between; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+.trip:last-child { border-bottom: 0; }
+.trip .t { font-weight: 700; font-size: 16px; }
+.trip .s { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.trip .k { text-align: right; white-space: nowrap; }
+.trip .k b { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.trip.draft .t::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 2px; transform: rotate(45deg) translateY(-1px); background: var(--warn); }
+.list .trip, #drafts .trip, #recent .trip { cursor: pointer; }
+
+/* Utlegg å levere: gult opplysningsskilt */
+#expenseCard { background: var(--warn); color: var(--warn-ink); border-color: transparent; }
+#expenseCard h2 { color: var(--warn-ink); }
+#expenseCard .hint { color: rgba(27, 21, 0, .72); }
+#expenseCard .btn.ghost { color: var(--warn-ink); border-color: rgba(27, 21, 0, .35); }
+.exp { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid rgba(27, 21, 0, .16); font-size: 15px; }
+.exp:last-child { border-bottom: 0; }
+
+.pl { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.pl:last-child { border-bottom: 0; }
+.pl .s { color: var(--muted); font-size: 13px; }
+.pl b { font-size: 18px; font-weight: 800; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 14px 11px; }
+.stat span { display: block; font-size: 13px; font-weight: 600; color: var(--muted); }
+.stat b { display: block; font-size: 28px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.monthbar { margin-bottom: 14px; }
+.monthbar select { font-weight: 700; font-size: 17px; }
+.empty { color: var(--muted); text-align: center; padding: 18px 8px; }
+
+#toast {
+  position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 20; max-width: 92vw;
+  transform: translateX(-50%) translateY(140px); visibility: hidden;
+  background: var(--white); color: #0a2a63; font: 700 15px/1.3 var(--font);
+  padding: 12px 18px 10px; border-radius: 10px; box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .5);
+  transition: transform .3s cubic-bezier(.3, .8, .3, 1);
+}
+html[data-theme="light"] #toast { background: var(--sign); color: var(--white); }
+#toast.show { transform: translateX(-50%) translateY(0); visibility: visible; }
+
+/* ---------- ett orkestrert øyeblikk ved oppstart ---------- */
+.boot .card.drive { animation: signIn .7s cubic-bezier(.2, .8, .2, 1) both; }
+.boot .drivebtn { animation: discIn .6s .35s cubic-bezier(.2, 1.3, .4, 1) both; }
+.boot #kjor > .card:not(.drive) { animation: rise .5s cubic-bezier(.2, .8, .2, 1) both; }
+.boot #kjor > .card:nth-child(2) { animation-delay: .5s; }
+.boot #kjor > .card:nth-child(3) { animation-delay: .6s; }
+.boot #kjor > .card:nth-child(4) { animation-delay: .7s; }
+@keyframes signIn { from { transform: perspective(700px) rotateX(-14deg) translateY(-10px); opacity: 0; } }
+@keyframes discIn { from { transform: scale(.6); opacity: 0; } }
+@keyframes rise { from { transform: translateY(12px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+}
+@media (max-width: 380px) {
+  .drive-stats div:first-child b { font-size: 38px; }
+  .drive-stats b { font-size: 24px; }
+  nav button { font-size: 14px; }
+}
